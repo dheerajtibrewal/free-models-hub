@@ -136,7 +136,9 @@ export const CAPABILITIES: Capability[] = [
     // image. We assume the expensive end so we under-promise rather than 429.
     quota: { bucket: 'cloudflare:neurons', neuronsPerCall: 58 },
     priority: 10,
-    notes: 'The only genuinely free image generator in the stack. ~170 images/day.',
+    // FLUX Schnell rejects width/height outright ("unevaluated properties").
+    providerParams: { steps: 4 },
+    notes: 'Fastest free image route. ~170 images/day. Takes steps, NOT width/height.',
   },
   {
     id: 'cloudflare:sdxl-base',
@@ -149,7 +151,8 @@ export const CAPABILITIES: Capability[] = [
     freePlanEligible: true,
     quota: { bucket: 'cloudflare:neurons', neuronsPerCall: 58 },
     priority: 20,
-    notes: 'Fallback image generator when the FLUX budget is spent.',
+    providerParams: { width: 1024, height: 1024 },
+    notes: 'Fallback image generator. Slower than FLUX (~19s) but reliable.',
   },
 
   // ------------------------------------------------------- Cloudflare: fallbacks
@@ -168,29 +171,39 @@ export const CAPABILITIES: Capability[] = [
     notes: 'Transcription fallback once the Groq Whisper budget is exhausted.',
   },
   {
-    id: 'cloudflare:llama-3.2-11b-vision',
+    id: 'cloudflare:llava-1.5-7b',
     provider: 'cloudflare',
-    modelId: '@cf/meta/llama-3.2-11b-vision-instruct',
-    label: 'Llama 3.2 11B Vision',
+    modelId: '@cf/llava-hf/llava-1.5-7b-hf',
+    label: 'LLaVA 1.5 7B',
     accepts: ['text', 'image'],
     emits: 'text',
     skills: ['vision', 'chat'],
     freePlanEligible: true,
     quota: { bucket: 'cloudflare:neurons', neuronsPerCall: 10 },
     priority: 30,
-    notes: 'Vision fallback. Cloudflare Llama is unaffected by Groq tier changes.',
+    notes:
+      'Vision fallback, but FLAKY: observed 503 "Unknown internal error" from ' +
+      'Workers AI on 27 Sep 2026. Kept because 503 is retryable, so it costs ' +
+      'one attempt and falls through to OpenRouter rather than failing the ' +
+      'task. Chosen over @cf/meta/llama-3.2-11b-vision-instruct (gated behind ' +
+      'a one-time model agreement) and @cf/moondream/... (returns an empty ' +
+      'result envelope we do not parse).',
   },
   {
-    id: 'cloudflare:llama-3.1-8b',
+    id: 'cloudflare:llama-3.2-3b',
     provider: 'cloudflare',
-    modelId: '@cf/meta/llama-3.1-8b-instruct',
-    label: 'Llama 3.1 8B (Cloudflare)',
+    modelId: '@cf/meta/llama-3.2-3b-instruct',
+    label: 'Llama 3.2 3B (Cloudflare)',
     accepts: ['text'],
     emits: 'text',
     skills: ['chat'],
     freePlanEligible: true,
-    quota: { bucket: 'cloudflare:neurons', neuronsPerCall: 6 },
+    quota: { bucket: 'cloudflare:neurons', neuronsPerCall: 10 },
     priority: 40,
+    notes:
+      'Text fallback when the Groq chat budget is spent. Uses the standard ' +
+      'messages/response shape, unlike @cf/openai/gpt-oss-120b which returns ' +
+      'a reasoning envelope.',
   },
   {
     id: 'cloudflare:melotts',

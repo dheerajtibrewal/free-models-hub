@@ -57,6 +57,14 @@ export interface Capability {
   priority: number;
   maxInputBytes?: number;
   maxAudioSeconds?: number;
+  /**
+   * Extra provider-specific body fields for this model.
+   *
+   * Models in the same family disagree about their own parameters -- FLUX
+   * Schnell REJECTS width/height that SDXL requires -- so the shape belongs
+   * with the model in the registry, not in an if-chain inside the adapter.
+   */
+  providerParams?: Record<string, unknown>;
   notes?: string;
 }
 

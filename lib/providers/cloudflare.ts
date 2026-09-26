@@ -157,14 +157,14 @@ function buildBody(cap: Capability, input: StepInput): Record<string, unknown> {
         message: 'image generation needs a text prompt',
       });
     }
-    return { prompt: input.payload.text.slice(0, 2000), width: 1024, height: 1024 };
+    return { prompt: input.payload.text.slice(0, 2000), ...cap.providerParams };
   }
 
   if (cap.skills.includes('tts')) {
     if (input.payload.modality !== 'text') {
       throw new RouterError({ kind: 'bad_input', retryable: false, message: 'TTS needs text' });
     }
-    return { prompt: input.payload.text.slice(0, 4000), lang: 'en' };
+    return { prompt: input.payload.text.slice(0, 4000), lang: 'en', ...cap.providerParams };
   }
 
   // vision / chat

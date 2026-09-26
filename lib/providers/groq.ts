@@ -78,7 +78,8 @@ export const groqAdapter: ProviderAdapter = {
           body: JSON.stringify({
             model: cap.modelId,
             input: input.payload.text.slice(0, 4000),
-            voice: process.env.GROQ_TTS_VOICE ?? 'Fritz-PlayAI',
+            // Orpheus accepts only: autumn diana hannah austin daniel troy
+            voice: process.env.GROQ_TTS_VOICE ?? 'diana',
             response_format: 'wav',
           }),
         },
