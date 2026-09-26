@@ -254,6 +254,30 @@ Security headers (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-
 
 ---
 
+## Analytics
+
+Two layers, deliberately separate. **Audience analytics** answers *"who is using
+which utility"*; **X-Ray** answers *"what did this one run actually do"*.
+
+| Layer | Gives you | Setup |
+|---|---|---|
+| **Vercel Web Analytics** | Visitors, pageviews, referrers, countries, devices | Enable in Vercel → Analytics. No env vars needed. |
+| **GA4** | Acquisition, retention, funnels, new vs returning | Set `NEXT_PUBLIC_GA_ID` (`G-XXXXXXXXXX`) as type **Config**, not Secret |
+
+Custom events — `task_started`, `task_completed`, `task_failed`, `xray_opened`
+and `<route>_used` — are sent to **both**, each call guarded independently.
+
+GA4 needs a measurement id to exist at all, so a deployment without one would
+otherwise record nothing while pageviews kept working perfectly — a confusing
+place to debug from. Sending to both guarantees a floor that needs no
+configuration.
+
+Nothing personally identifying is collected. The only visitor identifier the
+app itself keeps is a salted, truncated, day-scoped SHA-256 of the IP, used for
+the daily quota cap and expired with its key.
+
+---
+
 ## Not in V1
 
 Accounts · saved history · persistent execution logs · model benchmarking · paid providers · Hugging Face · a separate backend · video generation · bring-your-own-key.
