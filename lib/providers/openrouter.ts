@@ -71,7 +71,7 @@ export const openrouterAdapter: ProviderAdapter = {
           'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL ?? 'https://free-llm.vercel.app',
           'X-Title': 'Free LLM',
         },
-        body: JSON.stringify({ model: cap.modelId, messages, max_tokens: 2048 }),
+        body: JSON.stringify({ model: cap.modelId, messages, max_tokens: cap.maxOutputTokens ?? 1024 }),
       },
       signal,
     );

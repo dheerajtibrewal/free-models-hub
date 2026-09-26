@@ -32,6 +32,14 @@ export interface QuotaSpec {
   tpd?: number;
   audioSecPerDay?: number;
   audioSecPerHour?: number;
+  /**
+   * Output tokens per minute.
+   *
+   * Groq enforces this SEPARATELY from the token budget in its rate-limit
+   * headers, and it is far tighter: 1,000 OTPM on qwen3.8-27b versus 8,000
+   * input TPM. It only surfaces in the 429 body, never in a header.
+   */
+  otpm?: number;
   /** Cloudflare only: estimated neuron cost of one call, against 10k/day. */
   neuronsPerCall?: number;
 }
@@ -57,6 +65,13 @@ export interface Capability {
   priority: number;
   maxInputBytes?: number;
   maxAudioSeconds?: number;
+  /**
+   * Ceiling on generated tokens for one call.
+   *
+   * Must stay BELOW the model's OTPM or a single request can be rejected
+   * outright for reserving more than the whole per-minute output budget.
+   */
+  maxOutputTokens?: number;
   /**
    * Extra provider-specific body fields for this model.
    *

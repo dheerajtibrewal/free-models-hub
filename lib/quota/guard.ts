@@ -133,7 +133,8 @@ export async function snapshot(visitorId: string): Promise<QuotaSnapshot> {
 
 /** Is this specific model still within every budget it draws from? */
 export function isHealthy(cap: Capability, snap: QuotaSnapshot): BucketStatus {
-  const { bucket, rpm, rpd, tpd, audioSecPerDay, audioSecPerHour, neuronsPerCall } = cap.quota;
+  const { bucket, rpm, rpd, tpd, audioSecPerDay, audioSecPerHour, neuronsPerCall, otpm } =
+    cap.quota;
 
   // The browser route runs on the visitor's own device: no upstream budget.
   if (cap.provider === 'browser') return { bucket, healthy: true };
@@ -150,6 +151,16 @@ export function isHealthy(cap: Capability, snap: QuotaSnapshot): BucketStatus {
   }
   if (tpd !== undefined && (counters[FIELD.tpd] ?? 0) >= tpd) {
     return { bucket, healthy: false, reason: `daily token budget spent (${tpd})` };
+  }
+  // Output tokens per minute is the tightest limit Groq applies and the one
+  // most likely to bite on a verbose vision description. Skip the model rather
+  // than spend a call discovering it.
+  if (otpm !== undefined) {
+    const used = counters[FIELD.otpm(cap.id, minute)] ?? 0;
+    const needed = cap.maxOutputTokens ?? 0;
+    if (used + needed > otpm) {
+      return { bucket, healthy: false, reason: 'per-minute output token budget spent' };
+    }
   }
   if (audioSecPerDay !== undefined && (counters[FIELD.audioSec] ?? 0) >= audioSecPerDay) {
     return { bucket, healthy: false, reason: 'daily audio budget spent' };
@@ -205,13 +216,20 @@ export async function commit(
 
   for (const { capability, usage } of records) {
     if (capability.provider === 'browser') continue;
-    const { bucket, rpm, rpd, tpd, audioSecPerDay, audioSecPerHour, neuronsPerCall } =
+    const { bucket, rpm, rpd, tpd, audioSecPerDay, audioSecPerHour, neuronsPerCall, otpm } =
       capability.quota;
 
     if (rpd !== undefined) add(bucket, FIELD.rpd, 1);
     if (rpm !== undefined) add(bucket, FIELD.rpm(minute), 1);
     if (tpd !== undefined) {
       add(bucket, FIELD.tpd, (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0));
+    }
+    if (otpm !== undefined) {
+      // Groq charges the REQUESTED max_tokens against OTPM, not the tokens
+      // actually generated, so the guard has to reserve the same way or it
+      // will think there is budget left that the provider does not agree
+      // exists.
+      add(bucket, FIELD.otpm(capability.id, minute), capability.maxOutputTokens ?? usage?.outputTokens ?? 0);
     }
     if (audioSecPerDay !== undefined) add(bucket, FIELD.audioSec, Math.ceil(usage?.audioSeconds ?? 0));
     if (audioSecPerHour !== undefined) {
@@ -248,13 +266,22 @@ export async function penalize(cap: Capability): Promise<void> {
   if (!r || cap.provider === 'browser') return;
   try {
     const key = bucketKey(cap.quota.bucket);
-    if (cap.quota.rpm !== undefined) {
-      await r.hset(key, { [FIELD.rpm(minuteStamp())]: cap.quota.rpm });
-      await r.expire(key, KEY_TTL_SECONDS);
+    const minute = minuteStamp();
+
+    // Scope the penalty to whatever limit was actually hit. A model with its
+    // own OTPM ceiling (qwen) shares the org-level request bucket with models
+    // that have none (gpt-oss) -- maxing out the shared rpm counter because
+    // ONE model ran out of output tokens would take down text->text too.
+    if (cap.quota.otpm !== undefined) {
+      await r.hset(key, { [FIELD.otpm(cap.id, minute)]: cap.quota.otpm });
+    } else if (cap.quota.rpm !== undefined) {
+      await r.hset(key, { [FIELD.rpm(minute)]: cap.quota.rpm });
     } else if (cap.quota.rpd !== undefined) {
       await r.hset(key, { [FIELD.rpd]: cap.quota.rpd });
-      await r.expire(key, KEY_TTL_SECONDS);
+    } else {
+      return;
     }
+    await r.expire(key, KEY_TTL_SECONDS);
   } catch {
     /* non-fatal */
   }

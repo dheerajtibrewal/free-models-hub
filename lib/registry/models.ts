@@ -29,6 +29,9 @@ export const CAPABILITIES: Capability[] = [
     freePlanEligible: true,
     quota: { bucket: 'groq:chat', rpm: 30, rpd: 1000, tpm: 8000, tpd: 200000 },
     priority: 10,
+    // Verified 27 Sep 2026: no OTPM ceiling on this model (8,000 max_tokens
+    // accepted), unlike qwen.
+    maxOutputTokens: 2048,
     notes:
       'Primary reasoning model. TEXT ONLY despite Groq docs listing vision: ' +
       'verified 27 Sep 2026 that array message content is rejected outright ' +
@@ -45,6 +48,7 @@ export const CAPABILITIES: Capability[] = [
     freePlanEligible: true,
     quota: { bucket: 'groq:chat', rpm: 30, rpd: 1000, tpm: 8000, tpd: 200000 },
     priority: 20,
+    maxOutputTokens: 2048,
     notes: 'Fastest Groq free text model; good for prompt-rewrite steps.',
   },
 
@@ -57,10 +61,21 @@ export const CAPABILITIES: Capability[] = [
     emits: 'text',
     skills: ['chat', 'vision'],
     freePlanEligible: true,
-    quota: { bucket: 'groq:chat', rpm: 30, rpd: 1000, tpm: 8000, tpd: 200000 },
+    // otpm is per-MODEL and applies only here: gpt-oss accepts 8,000 output
+    // tokens happily, qwen caps at 1,000/minute. The org-level request limits
+    // still come from the shared groq:chat bucket.
+    // Groq's nominal OTPM here is 1,000, but its internal accounting charges
+    // more than our reservation does -- budgeting against the full figure
+    // still produced a 429 on the third call. 700 is a deliberate margin so
+    // we block cleanly on our side instead of burning a provider call.
+    quota: { bucket: 'groq:chat', rpm: 30, rpd: 1000, tpm: 8000, tpd: 200000, otpm: 700 },
     // The ONLY Groq model that accepts images, so it leads for vision while
     // sitting behind gpt-oss for plain chat.
     priority: 10,
+    // Groq charges the REQUESTED max_tokens against OTPM, not the tokens
+    // actually generated -- so 700 would allow only one call per minute.
+    // 300 leaves room for three, and the tightened prompt emits ~100.
+    maxOutputTokens: 300,
     notes: 'Verified vision-capable 27 Sep 2026. Shares the org-level chat budget.',
   },
 
@@ -170,25 +185,14 @@ export const CAPABILITIES: Capability[] = [
     maxAudioSeconds: 120,
     notes: 'Transcription fallback once the Groq Whisper budget is exhausted.',
   },
-  {
-    id: 'cloudflare:llava-1.5-7b',
-    provider: 'cloudflare',
-    modelId: '@cf/llava-hf/llava-1.5-7b-hf',
-    label: 'LLaVA 1.5 7B',
-    accepts: ['text', 'image'],
-    emits: 'text',
-    skills: ['vision', 'chat'],
-    freePlanEligible: true,
-    quota: { bucket: 'cloudflare:neurons', neuronsPerCall: 10 },
-    priority: 30,
-    notes:
-      'Vision fallback, but FLAKY: observed 503 "Unknown internal error" from ' +
-      'Workers AI on 27 Sep 2026. Kept because 503 is retryable, so it costs ' +
-      'one attempt and falls through to OpenRouter rather than failing the ' +
-      'task. Chosen over @cf/meta/llama-3.2-11b-vision-instruct (gated behind ' +
-      'a one-time model agreement) and @cf/moondream/... (returns an empty ' +
-      'result envelope we do not parse).',
-  },
+  // REMOVED: cloudflare:llava-1.5-7b (@cf/llava-hf/llava-1.5-7b-hf).
+  // Failed every attempt on 27 Sep 2026 -- 503 "Unknown internal error", then
+  // 200 with an empty body -- while costing ~9s per try. A fallback that never
+  // succeeds is worse than no fallback: it is pure added latency in front of
+  // the one that works. Vision now falls straight through to OpenRouter.
+  // (@cf/meta/llama-3.2-11b-vision-instruct is gated behind a one-time model
+  // agreement; @cf/moondream/... returns an unparsed empty envelope.)
+
   {
     id: 'cloudflare:llama-3.2-3b',
     provider: 'cloudflare',

@@ -35,6 +35,8 @@ export const FIELD = {
   audioSec: 'audio_sec',
   neurons: 'neurons',
   rpm: (minute: string) => `rpm:${minute}`,
+  /** Per-MODEL, unlike rpm/rpd which are org-level and shared across the bucket. */
+  otpm: (capabilityId: string, minute: string) => `otpm:${capabilityId}:${minute}`,
   audioSecHour: (hour: string) => `audio_h:${hour}`,
 } as const;
 

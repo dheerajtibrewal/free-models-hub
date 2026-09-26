@@ -103,3 +103,61 @@ describe('visitorAllowed', () => {
     expect(visitorAllowed(snap({}, 99))).toBe(false);
   });
 });
+
+describe('OTPM (output tokens per minute)', () => {
+  // Groq enforces this separately from the token budget and far more tightly:
+  // 1,000 OTPM vs 8,000 input TPM. It appears in no header, only in the 429.
+  const vision = capabilityById('groq:qwen3.8-27b')!;
+
+  it('applies OTPM only to the model that actually has one', () => {
+    // gpt-oss accepts 8,000 output tokens; only qwen carries an OTPM ceiling.
+    expect(capabilityById('groq:gpt-oss-120b')!.quota.otpm).toBeUndefined();
+    expect(vision.quota.otpm).toBeDefined();
+    // Budgeted below Groq's nominal 1,000: its accounting charges more than
+    // our reservation, so the margin is what stops us burning a 429.
+    expect(vision.quota.otpm!).toBeLessThan(1000);
+    // ...while still sharing the org-level request bucket.
+    expect(capabilityById('groq:gpt-oss-120b')!.quota.bucket).toBe(vision.quota.bucket);
+  });
+
+  it('leaves room for more than one call inside the per-minute budget', () => {
+    expect(vision.maxOutputTokens).toBeDefined();
+    // A single call must never reserve the whole per-minute budget, or the
+    // model can serve exactly one request per minute.
+    expect(vision.maxOutputTokens! * 2).toBeLessThanOrEqual(vision.quota.otpm!);
+  });
+
+  it('blocks the model when this minute cannot fund another generation', () => {
+    const minute = minuteStamp();
+    const nearlySpent = snap({ 'groq:chat': { [FIELD.otpm(vision.id, minute)]: 800 } });
+    // 800 used + 300 needed > 1000 limit.
+    expect(isHealthy(vision, nearlySpent).healthy).toBe(false);
+
+    const roomLeft = snap({ 'groq:chat': { [FIELD.otpm(vision.id, minute)]: 100 } });
+    expect(isHealthy(vision, roomLeft).healthy).toBe(true);
+  });
+
+  it('only counts the current minute', () => {
+    const stale = snap({ 'groq:chat': { [FIELD.otpm(vision.id, '202001010000')]: 999 } });
+    expect(isHealthy(vision, stale).healthy).toBe(true);
+  });
+});
+
+describe('penalty scoping', () => {
+  // Regression: qwen (OTPM-limited) shares the org-level groq:chat bucket with
+  // gpt-oss (no OTPM). Penalising the shared rpm counter when qwen ran out of
+  // OUTPUT tokens disabled text->text as collateral damage.
+  it('does not let a per-model limit disable its bucket-mates', () => {
+    const vision = capabilityById('groq:qwen3.8-27b')!;
+    const chat = capabilityById('groq:gpt-oss-120b')!;
+    expect(vision.quota.bucket).toBe(chat.quota.bucket);
+
+    // qwen's own OTPM field is maxed out...
+    const penalised = snap({
+      'groq:chat': { [FIELD.otpm(vision.id, minuteStamp())]: 1000 },
+    });
+    expect(isHealthy(vision, penalised).healthy).toBe(false);
+    // ...but its bucket-mate, which has no OTPM ceiling, still runs.
+    expect(isHealthy(chat, penalised).healthy).toBe(true);
+  });
+});

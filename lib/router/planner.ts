@@ -21,7 +21,7 @@ export interface PlanOptions {
  */
 export function plan(recipe: Recipe, snapshot: QuotaSnapshot, options: PlanOptions = {}): Plan {
   /** Why a step ended up with no candidates, so the user gets the real reason. */
-  const blockedBy = new Map<number, 'unconfigured' | 'quota'>();
+  const blockedBy = new Map<number, { cause: 'unconfigured' | 'quota'; reason?: string }>();
 
   const steps: PlannedStep[] = recipe.steps.map((recipeStep, index) => {
     let candidates = findCapabilities({
@@ -39,15 +39,21 @@ export function plan(recipe: Recipe, snapshot: QuotaSnapshot, options: PlanOptio
     candidates = candidates.filter((c) => ADAPTERS[c.provider]?.isConfigured());
     const configuredCount = candidates.length;
 
+    let firstReason: string | undefined;
     if (!options.ignoreQuota) {
-      candidates = candidates.filter((c) => isHealthy(c, snapshot).healthy);
+      const checked = candidates.map((c) => ({ cap: c, health: isHealthy(c, snapshot) }));
+      firstReason = checked.find((c) => !c.health.healthy)?.health.reason;
+      candidates = checked.filter((c) => c.health.healthy).map((c) => c.cap);
     }
 
     if (candidates.length === 0) {
       // Distinguish "we never had a model for this" from "we had one and it is
       // out of quota" -- they are different problems with different fixes, and
       // conflating them sends the user chasing the wrong one.
-      blockedBy.set(index, configuredCount === 0 ? 'unconfigured' : 'quota');
+      blockedBy.set(index, {
+        cause: configuredCount === 0 ? 'unconfigured' : 'quota',
+        reason: firstReason,
+      });
     }
 
     return {
@@ -67,20 +73,24 @@ export function plan(recipe: Recipe, snapshot: QuotaSnapshot, options: PlanOptio
   // enrichment is a quality nicety, so losing it must not lose the whole task.
   const blocking = steps.find((s) => s.candidates.length === 0 && !s.optional);
   if (blocking) {
-    const cause = blockedBy.get(blocking.index);
-    throw new RouterError(
-      cause === 'unconfigured'
-        ? {
-            kind: 'unavailable',
-            retryable: false,
-            message: `This route needs a provider that isn't configured on this deployment (step: ${blocking.title}).`,
-          }
-        : {
-            kind: 'quota_exhausted',
-            retryable: false,
-            message: `"${blocking.title}" has used up every free model's daily allowance. Budgets reset at 00:00 UTC.`,
-          },
-    );
+    const blocked = blockedBy.get(blocking.index);
+    if (blocked?.cause === 'unconfigured') {
+      throw new RouterError({
+        kind: 'unavailable',
+        retryable: false,
+        message: `This route needs a provider that isn't configured on this deployment (step: ${blocking.title}).`,
+      });
+    }
+    // Per-minute limits recover in about a minute; telling someone to wait
+    // until 00:00 UTC for a 60-second window is simply wrong.
+    const perMinute = /per-minute/.test(blocked?.reason ?? '');
+    throw new RouterError({
+      kind: 'quota_exhausted',
+      retryable: false,
+      message: perMinute
+        ? `"${blocking.title}" has hit its per-minute limit on every free model. Try again in about a minute.`
+        : `"${blocking.title}" has used up every free model's daily allowance. Budgets reset at 00:00 UTC.`,
+    });
   }
 
   return { recipe, steps };

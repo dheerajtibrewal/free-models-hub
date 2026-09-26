@@ -41,7 +41,14 @@ const DESCRIBE_FOR_SPEECH = `You describe an image for someone who cannot see it
 Write 3-5 flowing sentences in plain spoken language. Lead with the subject, then setting, then notable detail and mood.
 No markdown, no lists, no headings -- this text goes straight to a speech synthesiser.`;
 
-const OCR_AND_DESCRIBE = `Describe this image thoroughly. If it contains any text, transcribe that text accurately and preserve its structure.`;
+// Deliberately caps its own length: Groq allows only 1,000 output tokens per
+// minute, so a rambling "thorough description" can consume a whole minute's
+// budget in one call -- and it opened with filler like "Based on the visual
+// evidence provided, here is a thorough description:" anyway.
+const OCR_AND_DESCRIBE = `Describe this image.
+
+Lead with the subject, then setting and notable detail. If the image contains text, transcribe it accurately and keep its structure.
+Start immediately with the description -- no preamble, no "this image shows", no headings. Keep it under 150 words unless transcribing text.`;
 
 /**
  * Pipeline recipes, one per modality pair.

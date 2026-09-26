@@ -173,7 +173,7 @@ function buildBody(cap: Capability, input: StepInput): Record<string, unknown> {
       prompt: input.instruction?.trim() || 'Describe this image.',
       ...(input.systemPrompt ? { system: input.systemPrompt } : {}),
       image: Array.from(base64ToBytes(input.payload.base64)),
-      max_tokens: 1024,
+      max_tokens: cap.maxOutputTokens ?? 1024,
     };
   }
 
@@ -188,5 +188,5 @@ function buildBody(cap: Capability, input: StepInput): Record<string, unknown> {
   const messages: Array<{ role: string; content: string }> = [];
   if (input.systemPrompt) messages.push({ role: 'system', content: input.systemPrompt });
   messages.push({ role: 'user', content: input.payload.text });
-  return { messages, max_tokens: 2048 };
+  return { messages, max_tokens: cap.maxOutputTokens ?? 1024 };
 }

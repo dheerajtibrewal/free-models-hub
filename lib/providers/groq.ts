@@ -126,7 +126,14 @@ export const groqAdapter: ProviderAdapter = {
       {
         method: 'POST',
         headers: { ...auth, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: cap.modelId, messages, temperature: 0.7, max_tokens: 2048 }),
+        body: JSON.stringify({
+          model: cap.modelId,
+          messages,
+          temperature: 0.7,
+          // Never request more than the model's per-minute output budget:
+          // Groq rejects the call outright if max_tokens alone exceeds OTPM.
+          max_tokens: cap.maxOutputTokens ?? 1024,
+        }),
       },
       signal,
     );
