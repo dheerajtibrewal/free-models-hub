@@ -3,6 +3,10 @@
 import * as React from 'react';
 import { Moon, Sun } from 'lucide-react';
 
+// Deliberately NOT renamed alongside the product. This key is invisible to
+// users, and changing it would silently discard the theme preference of
+// everyone who has already visited — a real regression in exchange for tidiness
+// nobody can see.
 const STORAGE_KEY = 'free-llm:theme';
 
 /**

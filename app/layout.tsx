@@ -31,20 +31,20 @@ const SITE_URL = siteUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Free LLM — task-first multimodal AI',
-    template: '%s — Free LLM',
+    default: 'Free Models Hub — task-first multimodal AI',
+    template: '%s — Free Models Hub',
   },
   description:
-    'Pick what you want to do, not which model does it. Free LLM routes text, image and audio tasks across free AI providers, falls back automatically, and shows you exactly how it ran.',
+    'Pick what you want to do, not which model does it. Free Models Hub routes text, image and audio tasks across free AI providers, falls back automatically, and shows you exactly how it ran.',
   openGraph: {
-    title: 'Free LLM — task-first multimodal AI',
+    title: 'Free Models Hub — task-first multimodal AI',
     description:
-      'Choose an input and an output. Free LLM finds a free model that can do it, chains several when it has to, and shows the full execution trace.',
+      'Choose an input and an output. Free Models Hub finds a free model that can do it, chains several when it has to, and shows the full execution trace.',
     url: SITE_URL,
-    siteName: 'Free LLM',
+    siteName: 'Free Models Hub',
     type: 'website',
   },
-  twitter: { card: 'summary_large_image', title: 'Free LLM' },
+  twitter: { card: 'summary_large_image', title: 'Free Models Hub' },
   robots: { index: true, follow: true },
 };
 

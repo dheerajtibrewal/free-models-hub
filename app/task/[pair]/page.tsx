@@ -20,7 +20,7 @@ export async function generateMetadata({
   return {
     title: recipe.title,
     description: recipe.blurb,
-    openGraph: { title: `${recipe.title} — Free LLM`, description: recipe.blurb },
+    openGraph: { title: `${recipe.title} — Free Models Hub`, description: recipe.blurb },
   };
 }
 

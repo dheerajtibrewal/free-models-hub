@@ -27,7 +27,7 @@ export function visitorKey(visitorId: string, day = dayStamp()): string {
  */
 export function hashVisitor(
   ip: string,
-  salt = stringFromEnv('VISITOR_HASH_SALT') ?? 'free-llm-dev',
+  salt = stringFromEnv('VISITOR_HASH_SALT') ?? 'free-models-hub-dev',
 ): string {
   return createHash('sha256').update(`${salt}:${ip}`).digest('hex').slice(0, 24);
 }

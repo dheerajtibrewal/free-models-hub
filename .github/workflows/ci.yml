@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push supersedes an in-flight run on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · test · build · security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # REQUIRED. scripts/security-check.sh scans `git log --all` for
+          # credentials, and the default depth-1 shallow clone would let that
+          # check pass on a history it never actually saw.
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        # Runs entirely against mock adapters: no network, no provider quota.
+        run: npm test
+
+      - name: Build
+        # No provider credentials are set here on purpose. The app must build
+        # and run with zero keys -- unconfigured providers simply are not
+        # routing candidates -- so this doubles as a regression test for that.
+        run: npm run build
+
+      - name: Security check
+        # Must run AFTER build: it scans .next/static for leaked credentials
+        # and skips that assertion entirely if no build output exists.
+        run: npm run security-check

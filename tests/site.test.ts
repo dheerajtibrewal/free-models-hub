@@ -25,13 +25,13 @@ describe('siteUrl', () => {
   });
 
   it('uses an explicit URL when it is valid', () => {
-    process.env.NEXT_PUBLIC_SITE_URL = 'https://free-llm.example.com';
-    expect(siteUrl()).toBe('https://free-llm.example.com');
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://free-models-hub.example.com';
+    expect(siteUrl()).toBe('https://free-models-hub.example.com');
   });
 
   it('accepts a bare hostname and a trailing slash', () => {
-    process.env.NEXT_PUBLIC_SITE_URL = 'free-llm.example.com/';
-    expect(siteUrl()).toBe('https://free-llm.example.com');
+    process.env.NEXT_PUBLIC_SITE_URL = 'free-models-hub.example.com/';
+    expect(siteUrl()).toBe('https://free-models-hub.example.com');
   });
 
   it("falls back to Vercel's own URL so a fresh import needs no config", () => {

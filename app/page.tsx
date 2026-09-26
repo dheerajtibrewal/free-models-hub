@@ -40,7 +40,7 @@ export default function HomePage() {
             </h1>
 
             <p className="mx-auto mt-5 max-w-xl text-pretty text-center text-[15px] leading-relaxed text-muted-fg">
-              Pick an input and an output. Free LLM finds a free model that can do the job, chains
+              Pick an input and an output. Free Models Hub finds a free model that can do the job, chains
               several together when no single one can, and shows you exactly how it ran.
             </p>
 

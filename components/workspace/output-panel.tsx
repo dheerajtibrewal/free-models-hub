@@ -156,7 +156,7 @@ function OutputActions({ payload }: { payload: Payload }) {
   return (
     <a
       href={`data:${payload.mimeType};base64,${payload.base64}`}
-      download={`free-llm-output.${ext}`}
+      download={`free-models-hub-output.${ext}`}
       className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-[10px] px-3 text-[13px] font-medium text-muted-fg transition-colors duration-200 hover:bg-[var(--muted)] hover:text-fg"
     >
       <Download size={13} aria-hidden="true" />

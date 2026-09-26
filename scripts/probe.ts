@@ -6,8 +6,9 @@
  * to OUR keys today and reports any entry in `lib/registry/models.ts` that no
  * longer resolves.
  *
- *   npm run probe          # list models, cross-check the catalogue (no inference)
- *   npm run probe -- --live  # additionally make ONE real call per capability
+ *   npm run probe                   # cross-check the catalogue (no inference)
+ *   npm run probe -- --live         # additionally make ONE real call per model
+ *   npm run probe -- --write-status # regenerate PROVIDER_STATUS.md
  *
  * The default mode deliberately performs no inference: a check that spends
  * requests from a 1,000/day pool is a self-inflicted outage.
@@ -19,12 +20,14 @@ import { config } from 'dotenv';
 config({ path: '.env.local' });
 config({ path: '.env' });
 
+import { writeFileSync } from 'node:fs';
 import { CAPABILITIES } from '../lib/registry/models';
 import { adapterFor } from '../lib/providers';
 import type { Capability } from '../lib/registry/types';
 import type { StepInput } from '../lib/router/types';
 
 const LIVE = process.argv.includes('--live');
+const WRITE_STATUS = process.argv.includes('--write-status');
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -37,7 +40,7 @@ const bad = (s: string) => `${RED}✗${RESET} ${s}`;
 const warn = (s: string) => `${YELLOW}!${RESET} ${s}`;
 
 async function main() {
-  console.log(`\n${DIM}Free LLM — provider probe${RESET}\n`);
+  console.log(`\n${DIM}Free Models Hub — provider probe${RESET}\n`);
 
   const live = new Map<string, Set<string>>();
   live.set('groq', await groqModels());
@@ -47,21 +50,27 @@ async function main() {
   console.log(`\n${DIM}── catalogue cross-check ──${RESET}\n`);
 
   let unresolved = 0;
+  const results: StatusRow[] = [];
+
   for (const cap of CAPABILITIES) {
     if (cap.provider === 'browser') {
       console.log(ok(`${pad(cap.id)} ${DIM}on-device, nothing to verify${RESET}`));
+      results.push({ cap, state: 'on-device' });
       continue;
     }
 
     const known = live.get(cap.provider);
     if (!known || known.size === 0) {
       console.log(warn(`${pad(cap.id)} ${DIM}provider not reachable or not configured${RESET}`));
+      results.push({ cap, state: 'unchecked' });
       continue;
     }
 
     if (known.has(cap.modelId)) {
       console.log(ok(`${pad(cap.id)} ${DIM}${cap.modelId}${RESET}`));
+      results.push({ cap, state: 'resolved' });
     } else {
+      results.push({ cap, state: 'missing' });
       unresolved++;
       console.log(bad(`${pad(cap.id)} ${cap.modelId} ${RED}not in provider catalogue${RESET}`));
       const near = [...known].filter((m) => overlaps(m, cap.modelId)).slice(0, 3);
@@ -70,6 +79,7 @@ async function main() {
   }
 
   if (LIVE) await liveCheck();
+  if (WRITE_STATUS) writeStatus(results, unresolved);
 
   console.log(
     `\n${unresolved === 0 ? GREEN : YELLOW}${unresolved} catalogue entr${unresolved === 1 ? 'y' : 'ies'} unresolved${RESET}`,
@@ -229,6 +239,91 @@ function overlaps(a: string, b: string): boolean {
   const tokens = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 2);
   const left = new Set(tokens(a));
   return tokens(b).some((t) => left.has(t));
+}
+
+/* ------------------------------------------------------- status file output */
+
+type StatusState = 'resolved' | 'missing' | 'unchecked' | 'on-device';
+interface StatusRow {
+  cap: Capability;
+  state: StatusState;
+}
+
+const STATE_LABEL: Record<StatusState, string> = {
+  resolved: '✅ resolved',
+  missing: '❌ not in catalogue',
+  unchecked: '⚠️ not checked',
+  'on-device': '✅ on-device',
+};
+
+/**
+ * Write PROVIDER_STATUS.md.
+ *
+ * Free-tier facts are configuration, not documentation: they change without
+ * notice and a hand-written date in a README goes stale invisibly. Generating
+ * this file makes the age of the claim explicit and refreshable in one command.
+ */
+function writeStatus(rows: StatusRow[], unresolved: number): void {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10);
+
+  const byProvider = new Map<string, StatusRow[]>();
+  for (const r of rows) {
+    const list = byProvider.get(r.cap.provider) ?? [];
+    list.push(r);
+    byProvider.set(r.cap.provider, list);
+  }
+
+  const lines: string[] = [
+    '# Provider status',
+    '',
+    `**Last verified: ${date}**  ·  regenerate with \`npm run probe -- --write-status\``,
+    '',
+    'Free inference tiers change without notice — model ids are renamed, retired, or',
+    'moved behind a paid plan. This file records what each provider actually exposed',
+    'to the configured keys at the time above. It is generated, never hand-edited.',
+    '',
+    unresolved === 0
+      ? '> All catalogue entries resolved against live provider model lists.'
+      : `> **${unresolved} catalogue entr${unresolved === 1 ? 'y' : 'ies'} did not resolve.** See the table below and update \`lib/registry/models.ts\`.`,
+    '',
+  ];
+
+  for (const [provider, list] of byProvider) {
+    lines.push(`## ${provider}`, '');
+    lines.push('| Capability | Model id | Status | Free-tier budget (as configured) |');
+    lines.push('|---|---|---|---|');
+    for (const { cap, state } of list) {
+      lines.push(
+        `| ${cap.label} | \`${cap.modelId}\` | ${STATE_LABEL[state]} | ${budget(cap)} |`,
+      );
+    }
+    lines.push('');
+  }
+
+  lines.push(
+    '---',
+    '',
+    'Budgets are the values the router enforces in `lib/registry/models.ts`, not a',
+    'quote of the provider\'s published limits. The router treats them as ceilings:',
+    'when one is reached, that model stops being a routing candidate.',
+    '',
+  );
+
+  writeFileSync('PROVIDER_STATUS.md', lines.join('\n'));
+  console.log(`\n${GREEN}✓${RESET} wrote PROVIDER_STATUS.md ${DIM}(last verified ${date})${RESET}`);
+}
+
+function budget(cap: Capability): string {
+  const q = cap.quota;
+  const parts: string[] = [];
+  if (q.rpm) parts.push(`${q.rpm} rpm`);
+  if (q.rpd) parts.push(`${q.rpd.toLocaleString()}/day`);
+  if (q.tpd) parts.push(`${(q.tpd / 1000).toLocaleString()}k tokens/day`);
+  if (q.otpm) parts.push(`${q.otpm} output tokens/min`);
+  if (q.audioSecPerDay) parts.push(`${q.audioSecPerDay.toLocaleString()} audio-sec/day`);
+  if (q.neuronsPerCall) parts.push(`~${q.neuronsPerCall} neurons/call`);
+  return parts.length ? parts.join(' · ') : 'no upstream budget';
 }
 
 main().catch((e) => {

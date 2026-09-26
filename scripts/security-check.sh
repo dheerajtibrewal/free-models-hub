@@ -12,7 +12,7 @@ fail() { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAIL=1; }
 SECRET_RE='gsk_[A-Za-z0-9]{25,}|sk-or-v1-[a-f0-9]{45,}|cfat_[A-Za-z0-9]{25,}|[A-Za-z0-9-]+\.upstash\.io|AAAAAAA[A-Za-z0-9_-]{25,}'
 FAKE_RE='FAKE|EXAMPLE|redacted|placeholder|your-|xxxx'
 
-echo "Free LLM — pre-push security check"
+echo "Free Models Hub — pre-push security check"
 echo
 
 hits=$(git ls-files -z | xargs -0 grep -nE "$SECRET_RE" 2>/dev/null | grep -vE "$FAKE_RE" || true)

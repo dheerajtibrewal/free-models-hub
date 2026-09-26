@@ -9,16 +9,16 @@ export function SiteHeader() {
         <Link
           href="/"
           className="group flex items-center gap-2.5 rounded-md"
-          aria-label="Free LLM home"
+          aria-label="Free Models Hub home"
         >
           <span
             className="grid h-8 w-8 place-items-center rounded-[9px] text-[13px] font-bold text-white"
             style={{ background: 'var(--gradient-primary)' }}
             aria-hidden="true"
           >
-            FL
+            FM
           </span>
-          <span className="text-[15px] font-semibold tracking-tight">Free LLM</span>
+          <span className="text-[15px] font-semibold tracking-tight">Free Models Hub</span>
         </Link>
 
         <div className="flex items-center gap-1.5">

@@ -12,7 +12,7 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-[var(--border)]">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <p className="max-w-xl text-[11.5px] leading-relaxed text-[var(--subtle-fg)]">
-          Free LLM routes to the free tiers of Groq, Cloudflare Workers AI and OpenRouter. Daily
+          Free Models Hub routes to the free tiers of Groq, Cloudflare Workers AI and OpenRouter. Daily
           allowances are shared by everyone and reset at 00:00 UTC. No accounts, nothing stored.
         </p>
 

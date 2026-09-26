@@ -71,7 +71,7 @@ export const openrouterAdapter: ProviderAdapter = {
           'Content-Type': 'application/json',
           // OpenRouter attributes free-tier traffic by these headers.
           'HTTP-Referer': siteUrl(),
-          'X-Title': 'Free LLM',
+          'X-Title': 'Free Models Hub',
         },
         body: JSON.stringify({ model: cap.modelId, messages, max_tokens: cap.maxOutputTokens ?? 1024 }),
       },
