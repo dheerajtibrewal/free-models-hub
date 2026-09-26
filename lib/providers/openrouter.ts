@@ -1,6 +1,7 @@
 import type { Capability } from '../registry';
 import type { NormalizedError, ProviderAdapter, StepInput, StepOutput } from '../router/types';
 import { RouterError } from '../router/types';
+import { siteUrl } from '../site';
 import { dataUrl, httpJson, redact, transportToError } from './http';
 
 /**
@@ -68,7 +69,7 @@ export const openrouterAdapter: ProviderAdapter = {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           // OpenRouter attributes free-tier traffic by these headers.
-          'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL ?? 'https://free-llm.vercel.app',
+          'HTTP-Referer': siteUrl(),
           'X-Title': 'Free LLM',
         },
         body: JSON.stringify({ model: cap.modelId, messages, max_tokens: cap.maxOutputTokens ?? 1024 }),

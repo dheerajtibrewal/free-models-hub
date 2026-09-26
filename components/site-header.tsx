@@ -30,7 +30,7 @@ export function SiteHeader() {
           </Link>
           <ThemeToggle />
           <a
-            href="https://github.com"
+            href="https://github.com/dheerajtibrewal/free-models-hub"
             target="_blank"
             rel="noreferrer noopener"
             className="grid h-11 w-11 place-items-center rounded-md text-muted-fg transition-colors duration-200 hover:bg-[var(--muted)] hover:text-fg"

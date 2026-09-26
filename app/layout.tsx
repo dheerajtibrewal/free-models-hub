@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import { Analytics } from '@vercel/analytics/next';
 import { SiteFooter } from '@/components/site-footer';
+import { siteUrl } from '@/lib/site';
 import './globals.css';
 
 const inter = Inter({
@@ -24,7 +25,7 @@ const mono = JetBrains_Mono({
   display: 'swap',
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://free-llm.vercel.app';
+const SITE_URL = siteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
