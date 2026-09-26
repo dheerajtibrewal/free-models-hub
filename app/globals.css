@@ -1,0 +1,213 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   Design tokens.  Dark-first (style: Dark Mode / OLED), light theme available
+   via [data-theme='light'].  Every colour is defined on bare :root first so no
+   token has its only definition inside a media query.
+
+   Accessibility note: --primary (#2563EB) on --bg (#0F172A) is only 3.6:1, so
+   it is used for FILLED surfaces only (white on it = 5.2:1).  Text-weight blue
+   uses --accent-text (#60A5FA, ~7:1).
+   --------------------------------------------------------------------------- */
+:root {
+  --bg: #0f172a;
+  --bg-raised: #131c30;
+  --card: #1b2336;
+  --muted: #272f42;
+  --fg: #f8fafc;
+  --muted-fg: #94a3b8;
+  --subtle-fg: #64748b;
+  --border: #1e293b;
+  --border-hover: #475569;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-fg: #ffffff;
+  --accent-text: #60a5fa;
+  --ring: #3b82f6;
+  --destructive: #ef4444;
+  --destructive-fg: #ffffff;
+  --success: #22c55e;
+  --warning: #f59e0b;
+
+  --gradient-primary: linear-gradient(135deg, #2563eb, #1d4ed8);
+  --gradient-hero: radial-gradient(
+    60% 50% at 50% 0%,
+    rgba(37, 99, 235, 0.18) 0%,
+    rgba(37, 99, 235, 0) 100%
+  );
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --bg: #f8fafc;
+  --bg-raised: #ffffff;
+  --card: #ffffff;
+  --muted: #e9eff8;
+  --fg: #0f172a;
+  --muted-fg: #475569;
+  --subtle-fg: #64748b;
+  --border: #e2e8f0;
+  --border-hover: #cbd5e1;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-fg: #ffffff;
+  --accent-text: #1d4ed8;
+  --ring: #2563eb;
+  --destructive: #dc2626;
+  --destructive-fg: #ffffff;
+  --success: #16a34a;
+  --warning: #b45309;
+
+  --gradient-hero: radial-gradient(
+    60% 50% at 50% 0%,
+    rgba(37, 99, 235, 0.1) 0%,
+    rgba(37, 99, 235, 0) 100%
+  );
+
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-raised: var(--bg-raised);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-fg: var(--fg);
+  --color-muted-fg: var(--muted-fg);
+  --color-subtle-fg: var(--subtle-fg);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-accent-text: var(--accent-text);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-fg: var(--destructive-fg);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --radius-token: var(--radius);
+
+  /* Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 */
+  --spacing-panel: 24px;
+  --spacing-section: 32px;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Latency / token figures must not jitter while they stream in. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Never remove focus affordance; make it a consistent, visible ring. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.35);
+  color: var(--fg);
+}
+
+/* Scrollbars, dark-first but token-driven so light theme follows. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+
+@keyframes fl-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fl-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes fl-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.fl-rise {
+  animation: fl-rise 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fl-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--muted);
+}
+.fl-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: fl-sweep 1.4s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .fl-rise {
+    animation: none;
+  }
+}
