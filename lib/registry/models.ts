@@ -23,13 +23,16 @@ export const CAPABILITIES: Capability[] = [
     provider: 'groq',
     modelId: 'openai/gpt-oss-120b',
     label: 'GPT-OSS 120B',
-    accepts: ['text', 'image'],
+    accepts: ['text'],
     emits: 'text',
-    skills: ['chat', 'vision'],
+    skills: ['chat'],
     freePlanEligible: true,
     quota: { bucket: 'groq:chat', rpm: 30, rpd: 1000, tpm: 8000, tpd: 200000 },
     priority: 10,
-    notes: 'Primary reasoning + vision model on the Groq free tier.',
+    notes:
+      'Primary reasoning model. TEXT ONLY despite Groq docs listing vision: ' +
+      'verified 27 Sep 2026 that array message content is rejected outright ' +
+      '("content must be a string"). Qwen 3.8 27B is the vision route.',
   },
   {
     id: 'groq:gpt-oss-20b',
@@ -43,6 +46,22 @@ export const CAPABILITIES: Capability[] = [
     quota: { bucket: 'groq:chat', rpm: 30, rpd: 1000, tpm: 8000, tpd: 200000 },
     priority: 20,
     notes: 'Fastest Groq free text model; good for prompt-rewrite steps.',
+  },
+
+  {
+    id: 'groq:qwen3.8-27b',
+    provider: 'groq',
+    modelId: 'qwen/qwen3.8-27b',
+    label: 'Qwen 3.8 27B',
+    accepts: ['text', 'image'],
+    emits: 'text',
+    skills: ['chat', 'vision'],
+    freePlanEligible: true,
+    quota: { bucket: 'groq:chat', rpm: 30, rpd: 1000, tpm: 8000, tpd: 200000 },
+    // The ONLY Groq model that accepts images, so it leads for vision while
+    // sitting behind gpt-oss for plain chat.
+    priority: 10,
+    notes: 'Verified vision-capable 27 Sep 2026. Shares the org-level chat budget.',
   },
 
   // ------------------------------------------------------------- Groq: audio in
@@ -90,8 +109,8 @@ export const CAPABILITIES: Capability[] = [
   {
     id: 'groq:orpheus-tts',
     provider: 'groq',
-    modelId: 'playai-tts',
-    label: 'Groq TTS (preview)',
+    modelId: 'canopylabs/orpheus-v1-english',
+    label: 'Orpheus v1',
     accepts: ['text'],
     emits: 'audio',
     skills: ['tts'],
@@ -99,8 +118,8 @@ export const CAPABILITIES: Capability[] = [
     quota: { bucket: 'groq:tts', rpm: 10, rpd: 100 },
     priority: 30,
     notes:
-      'unverified — Groq TTS sits in the preview tier and the model id moves. ' +
-      'Browser SpeechSynthesis is the guaranteed fallback behind this.',
+      'Verified present on this key 27 Sep 2026 (playai-tts, the previous id, ' +
+      'is gone). Browser SpeechSynthesis remains the guaranteed fallback.',
   },
 
   // ------------------------------------------------- Cloudflare: image out (key)
@@ -189,10 +208,10 @@ export const CAPABILITIES: Capability[] = [
 
   // ------------------------------------------------- OpenRouter: last resort only
   {
-    id: 'openrouter:llama-3.3-70b-free',
+    id: 'openrouter:nemotron-3-super-free',
     provider: 'openrouter',
-    modelId: 'meta-llama/llama-3.3-70b-instruct:free',
-    label: 'Llama 3.3 70B (OpenRouter)',
+    modelId: 'nvidia/nemotron-3-super-120b-a12b:free',
+    label: 'Nemotron 3 Super 120B (OpenRouter)',
     accepts: ['text'],
     emits: 'text',
     skills: ['chat'],
@@ -202,17 +221,17 @@ export const CAPABILITIES: Capability[] = [
     notes: 'Only 50 requests/day. Genuine last resort.',
   },
   {
-    id: 'openrouter:qwen-2.5-vl-72b-free',
+    id: 'openrouter:gemma-4-31b-free',
     provider: 'openrouter',
-    modelId: 'qwen/qwen-2.5-vl-72b-instruct:free',
-    label: 'Qwen2.5 VL 72B (OpenRouter)',
+    modelId: 'google/gemma-4-31b-it:free',
+    label: 'Gemma 4 31B (OpenRouter)',
     accepts: ['text', 'image'],
     emits: 'text',
     skills: ['vision', 'chat'],
     freePlanEligible: true,
     quota: { bucket: 'openrouter:free', rpm: 20, rpd: 50 },
     priority: 90,
-    notes: 'unverified model id — confirm with `npm run probe`.',
+    notes: 'Vision-capable last resort. Verified against the live free list 27 Sep 2026.',
   },
 
   // ------------------------------------------- Browser: on-device, zero quota

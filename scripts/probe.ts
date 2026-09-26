@@ -12,7 +12,13 @@
  * The default mode deliberately performs no inference: a check that spends
  * requests from a 1,000/day pool is a self-inflicted outage.
  */
-import 'dotenv/config';
+import { config } from 'dotenv';
+// Next.js loads .env.local automatically; a standalone tsx script does not, and
+// dotenv defaults to plain `.env`. Load the same files Next would, in the same
+// precedence order, so the probe sees exactly what the app will see.
+config({ path: '.env.local' });
+config({ path: '.env' });
+
 import { CAPABILITIES } from '../lib/registry/models';
 import { adapterFor } from '../lib/providers';
 import type { Capability } from '../lib/registry/types';
@@ -173,9 +179,25 @@ async function liveCheck() {
   }
 }
 
+/**
+ * A real 64x64 solid-red PNG.
+ *
+ * A 1x1 pixel is NOT good enough: Groq's vision model parses the request but
+ * rejects a degenerate image with "invalid image data", which reads exactly
+ * like a model that cannot do vision at all. That false negative is what made
+ * the catalogue wrong in the first place.
+ */
+const RED_64_PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAT0lEQVR42u3PQQkAAAgEsIty/dMYyQi+hcEKLNO+FgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGBywI6LQEAwyG+sAAAAABJRU5ErkJggg==';
+
 function sampleFor(cap: Capability): StepInput | null {
-  if (cap.skills.includes('chat') && cap.accepts.includes('text') && cap.emits === 'text') {
-    return { payload: { modality: 'text', text: 'Reply with the single word: ready' } };
+  // Vision is checked FIRST: a vision-capable model usually also advertises
+  // `chat`, and matching chat first would quietly test the wrong code path.
+  if (cap.skills.includes('vision')) {
+    return {
+      payload: { modality: 'image', base64: RED_64_PNG, mimeType: 'image/png' },
+      instruction: 'What single colour fills this image? Answer in one word.',
+    };
   }
   if (cap.skills.includes('image-gen')) {
     return { payload: { modality: 'text', text: 'a single red maple leaf on white paper' } };
@@ -183,19 +205,10 @@ function sampleFor(cap: Capability): StepInput | null {
   if (cap.skills.includes('tts')) {
     return { payload: { modality: 'text', text: 'Routing works.' } };
   }
-  if (cap.skills.includes('vision')) {
-    // 1x1 PNG: enough to prove the request shape is accepted.
-    return {
-      payload: {
-        modality: 'image',
-        base64:
-          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==',
-        mimeType: 'image/png',
-      },
-      instruction: 'What colour is this?',
-    };
+  if (cap.skills.includes('chat') && cap.accepts.includes('text') && cap.emits === 'text') {
+    return { payload: { modality: 'text', text: 'Reply with the single word: ready' } };
   }
-  // Transcription needs real speech to be meaningful; skipped deliberately.
+  // Transcription needs real speech to be meaningful; exercised end-to-end instead.
   return null;
 }
 

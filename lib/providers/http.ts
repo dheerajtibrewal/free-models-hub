@@ -35,6 +35,10 @@ async function httpError(res: Response): Promise<RouterError> {
   return new RouterError(statusToError(res.status, detail));
 }
 
+/** 400-with-a-provider-side-cause signatures, which must not block fallback. */
+const PROVIDER_SIDE_400 =
+  /model_terms_required|terms acceptance|model_not_found|does not exist|decommissioned|no longer supported|is not available|unsupported_model/i;
+
 export function statusToError(status: number, detail: string): NormalizedError {
   const message = detail || `HTTP ${status}`;
   if (status === 429) {
@@ -47,7 +51,16 @@ export function statusToError(status: number, detail: string): NormalizedError {
     return { kind: 'auth', retryable: true, message, status };
   }
   if (status === 400 || status === 422) {
-    // Our own payload is wrong; another model will reject it the same way.
+    // Not every 400 is our fault. Providers use 400 for their OWN config
+    // problems too -- an unaccepted model licence, a decommissioned model.
+    // Those must stay retryable, or a single misconfigured model takes down a
+    // route that had a perfectly good fallback behind it. (Groq returns
+    // `model_terms_required` this way, which otherwise killed text->audio
+    // instead of falling through to the on-device voice.)
+    if (PROVIDER_SIDE_400.test(detail)) {
+      return { kind: 'unavailable', retryable: true, message, status };
+    }
+    // Genuinely our payload: another model will reject it identically.
     return { kind: 'bad_input', retryable: false, message, status };
   }
   if (status === 404) {

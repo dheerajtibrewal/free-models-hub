@@ -75,12 +75,26 @@ downscaled to 1024px, audio to 16 kHz mono and capped at 120 s.
 | **OpenRouter** | 20 RPM but **50 requests/day** under $10 lifetime credit | Last resort only |
 | **Upstash Redis** | 500K commands/month | Counters only |
 
-Two things that bite:
+Four things that bite, all found by probing a live key on 27 Sep 2026:
 
+- **`gpt-oss-120b` does not do vision**, despite Groq's model docs listing it. It
+  rejects array message content outright (`"content must be a string"`).
+  **`qwen/qwen3.8-27b` is the actual Groq vision model** — verified by having it
+  correctly name the colour of a test image.
 - **`llama-3.1-8b-instant` and `llama-3.3-70b-versatile` left Groq's free tier on
   16 Aug 2026.** They are deliberately absent from the catalogue.
 - **Groq limits are org-level.** Extra API keys do not multiply quota, which is why
   every free Groq chat model shares one bucket in the registry.
+- **OpenRouter's free lineup turns over fast.** Both model ids that looked obvious
+  (`meta-llama/llama-3.3-70b-instruct:free`, `qwen/qwen-2.5-vl-72b-instruct:free`)
+  had already 404'd. Never hardcode without probing.
+
+A subtle one worth knowing: providers return **400 for their own config problems**,
+not just for bad payloads. Groq answers `model_terms_required` with a 400 when the
+org has not accepted a model's licence. Classifying that as "our payload is wrong"
+made it non-retryable and killed text→audio outright instead of falling through to
+the on-device voice. [`lib/providers/http.ts`](lib/providers/http.ts) now keeps
+provider-side 400s retryable.
 
 Model ids churn. Run `npm run probe` to ask each provider what it actually exposes to
 your keys and flag catalogue entries that no longer resolve.
