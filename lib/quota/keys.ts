@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { stringFromEnv } from '../env';
 
 /** Day-scoped key stamp in UTC -- Cloudflare's neuron pool resets at 00:00 UTC. */
 export function dayStamp(now = new Date()): string {
@@ -24,7 +25,10 @@ export function visitorKey(visitorId: string, day = dayStamp()): string {
  * The raw IP is never stored or logged -- only this salted digest, which is
  * day-scoped by the key it ends up in and expires with it.
  */
-export function hashVisitor(ip: string, salt = process.env.VISITOR_HASH_SALT ?? 'free-llm-dev'): string {
+export function hashVisitor(
+  ip: string,
+  salt = stringFromEnv('VISITOR_HASH_SALT') ?? 'free-llm-dev',
+): string {
   return createHash('sha256').update(`${salt}:${ip}`).digest('hex').slice(0, 24);
 }
 

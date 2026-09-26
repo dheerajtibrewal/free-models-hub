@@ -12,16 +12,18 @@
  *   2. Vercel's own deployment URL, so a fresh import needs no configuration
  *   3. localhost, for development
  */
+import { stringFromEnv } from './env';
+
 const DEV_FALLBACK = 'http://localhost:3000';
 
 export function siteUrl(): string {
-  const explicit = normalize(process.env.NEXT_PUBLIC_SITE_URL);
+  const explicit = normalize(stringFromEnv('NEXT_PUBLIC_SITE_URL'));
   if (explicit) return explicit;
 
   // Set automatically by Vercel. Production domain first, then the immutable
   // per-deployment URL so previews get correct absolute links too.
   const vercelHost =
-    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() || process.env.VERCEL_URL?.trim();
+    stringFromEnv('VERCEL_PROJECT_PRODUCTION_URL') ?? stringFromEnv('VERCEL_URL');
   const fromVercel = normalize(vercelHost);
   if (fromVercel) return fromVercel;
 

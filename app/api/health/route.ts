@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ADAPTERS } from '@/lib/providers';
 import { CAPABILITIES, type ProviderId } from '@/lib/registry';
+import { stringFromEnv } from '@/lib/env';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ export async function GET() {
   }));
 
   const redisConfigured = Boolean(
-    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
+    stringFromEnv('UPSTASH_REDIS_REST_URL') && stringFromEnv('UPSTASH_REDIS_REST_TOKEN'),
   );
 
   return NextResponse.json(

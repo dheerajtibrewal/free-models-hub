@@ -1,6 +1,7 @@
 import type { Capability } from '../registry';
 import type { NormalizedError, ProviderAdapter, StepInput, StepOutput } from '../router/types';
 import { RouterError } from '../router/types';
+import { stringFromEnv } from '../env';
 import { base64ToBytes, bytesToBase64, redact, statusToError, transportToError } from './http';
 
 /**
@@ -17,8 +18,8 @@ interface CfEnvelope<T> {
 
 function creds(): { accountId?: string; token?: string } {
   return {
-    accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
-    token: process.env.CLOUDFLARE_API_TOKEN,
+    accountId: stringFromEnv('CLOUDFLARE_ACCOUNT_ID'),
+    token: stringFromEnv('CLOUDFLARE_API_TOKEN'),
   };
 }
 

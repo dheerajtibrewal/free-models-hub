@@ -1,6 +1,7 @@
 import type { Capability } from '../registry';
 import type { NormalizedError, ProviderAdapter, StepInput, StepOutput } from '../router/types';
 import { RouterError } from '../router/types';
+import { stringFromEnv } from '../env';
 import { siteUrl } from '../site';
 import { dataUrl, httpJson, redact, transportToError } from './http';
 
@@ -24,11 +25,11 @@ export const openrouterAdapter: ProviderAdapter = {
   id: 'openrouter',
 
   isConfigured() {
-    return Boolean(process.env.OPENROUTER_API_KEY);
+    return Boolean(stringFromEnv('OPENROUTER_API_KEY'));
   },
 
   async invoke(cap: Capability, input: StepInput, signal: AbortSignal): Promise<StepOutput> {
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = stringFromEnv('OPENROUTER_API_KEY');
     if (!apiKey) {
       throw new RouterError({
         kind: 'auth',

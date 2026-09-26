@@ -1,6 +1,7 @@
 import type { Capability } from '../registry';
 import { adapterFor } from '../providers';
 import { commit, penalize, type UsageRecord } from '../quota/guard';
+import { numberFromEnv } from '../env';
 import type {
   AttemptTrace,
   BucketConsumption,
@@ -34,7 +35,10 @@ export interface ExecuteResult {
   trace: XRayTrace;
 }
 
-const STEP_TIMEOUT_MS = Number(process.env.STEP_TIMEOUT_MS ?? 45_000);
+// Read per-call rather than at module load, so a misconfigured value cannot be
+// frozen in at cold start. `min` rejects a 0 that would abort every request
+// before it left the building.
+const stepTimeoutMs = () => numberFromEnv('STEP_TIMEOUT_MS', 45_000, { min: 1000, max: 55_000 });
 
 /**
  * Run a plan step by step.
@@ -261,7 +265,7 @@ async function invokeWithTimeout(cap: Capability, input: StepInput, outer: Abort
   const controller = new AbortController();
   const onAbort = () => controller.abort();
   outer.addEventListener('abort', onAbort, { once: true });
-  const timer = setTimeout(() => controller.abort(), STEP_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), stepTimeoutMs());
 
   try {
     return await adapter.invoke(cap, input, controller.signal);

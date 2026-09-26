@@ -4,6 +4,7 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 import { Analytics } from '@vercel/analytics/next';
 import { SiteFooter } from '@/components/site-footer';
 import { siteUrl } from '@/lib/site';
+import { stringFromEnv } from '@/lib/env';
 import './globals.css';
 
 const inter = Inter({
@@ -56,7 +57,7 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  const gaId = stringFromEnv('NEXT_PUBLIC_GA_ID');
 
   return (
     <html lang="en" suppressHydrationWarning>

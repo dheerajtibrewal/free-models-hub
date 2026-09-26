@@ -1,6 +1,7 @@
 import type { Capability } from '../registry';
 import type { NormalizedError, ProviderAdapter, StepInput, StepOutput } from '../router/types';
 import { RouterError } from '../router/types';
+import { stringFromEnv } from '../env';
 import { base64ToBytes, bytesToBase64, dataUrl, httpBinary, httpJson, transportToError } from './http';
 
 const BASE = 'https://api.groq.com/openai/v1';
@@ -16,7 +17,7 @@ interface TranscriptionResponse {
 }
 
 function key(): string | undefined {
-  return process.env.GROQ_API_KEY;
+  return stringFromEnv('GROQ_API_KEY');
 }
 
 export const groqAdapter: ProviderAdapter = {
@@ -79,7 +80,7 @@ export const groqAdapter: ProviderAdapter = {
             model: cap.modelId,
             input: input.payload.text.slice(0, 4000),
             // Orpheus accepts only: autumn diana hannah austin daniel troy
-            voice: process.env.GROQ_TTS_VOICE ?? 'diana',
+            voice: stringFromEnv('GROQ_TTS_VOICE') ?? 'diana',
             response_format: 'wav',
           }),
         },

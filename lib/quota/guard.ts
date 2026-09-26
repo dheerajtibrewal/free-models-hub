@@ -11,8 +11,9 @@ import {
   visitorKey,
 } from './keys';
 import { COMMIT_LUA, SNAPSHOT_LUA } from './lua';
+import { numberFromEnv, stringFromEnv } from '../env';
 
-export const VISITOR_DAILY_LIMIT = Number(process.env.VISITOR_DAILY_LIMIT ?? 15);
+export const VISITOR_DAILY_LIMIT = numberFromEnv('VISITOR_DAILY_LIMIT', 15, { min: 1 });
 
 export interface QuotaSnapshot {
   visitorUsed: number;
@@ -35,8 +36,8 @@ let clientResolved = false;
 function redis(): Redis | null {
   if (clientResolved) return client;
   clientResolved = true;
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = stringFromEnv('UPSTASH_REDIS_REST_URL');
+  const token = stringFromEnv('UPSTASH_REDIS_REST_TOKEN');
   client = url && token ? new Redis({ url, token }) : null;
   return client;
 }
@@ -181,7 +182,7 @@ export function isHealthy(cap: Capability, snap: QuotaSnapshot): BucketStatus {
   return { bucket, healthy: true };
 }
 
-export const NEURON_DAILY_BUDGET = Number(process.env.CF_NEURON_DAILY_BUDGET ?? 10000);
+export const NEURON_DAILY_BUDGET = numberFromEnv('CF_NEURON_DAILY_BUDGET', 10_000, { min: 100 });
 
 export function visitorAllowed(snap: QuotaSnapshot): boolean {
   return snap.visitorUsed < snap.visitorLimit;
