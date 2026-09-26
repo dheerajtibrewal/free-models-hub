@@ -40,5 +40,8 @@
     "node": "22.x"
   },
   "description": "Task-first multimodal AI router across free inference providers",
-  "license": "MIT"
+  "license": "MIT",
+  "overrides": {
+    "postcss": "^8.5.28"
+  }
 }

@@ -7,13 +7,14 @@ Say what you want done — not which model does it.
 
 Text · Image · Audio, routed across free inference tiers, composed when no single model can do the job, and explained end to end.
 
-### [→ Try it live](https://free-models-hub.vercel.app)
+
+[![Live demo](https://img.shields.io/badge/Live%20demo-free--models--hub.vercel.app-2563EB?style=for-the-badge&logo=vercel&logoColor=white)](https://free-models-hub.vercel.app/)
 
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Cost](https://img.shields.io/badge/infra%20cost-%E2%82%B90-22C55E)](#the-zero-cost-constraint)
-[![Tests](https://img.shields.io/badge/tests-57%20passing-22C55E)](#testing)
+[![Tests](https://img.shields.io/badge/tests-70%20passing-22C55E)](#testing)
 
 </div>
 
@@ -32,6 +33,20 @@ That is a routing problem, not a user problem. **Free LLM hides it entirely.**
  The app works out:  Whisper  →  LLM rewrites intent into a prompt  →  FLUX
                      ~3 seconds, three models, one click, ₹0
 ```
+
+---
+
+## Live demo
+
+**[free-models-hub.vercel.app](https://free-models-hub.vercel.app/)** — no sign-up, nothing to install.
+
+Worth trying in this order:
+
+1. **[Text → Text](https://free-models-hub.vercel.app/task/text-to-text)** — the fastest route, then open **X-Ray** under the result to see the provider, model, tokens and per-step latency.
+2. **[Audio → Image](https://free-models-hub.vercel.app/task/audio-to-image)** — press record, describe a picture out loud, and watch three models run in sequence in about three seconds.
+3. **[Text → Image](https://free-models-hub.vercel.app/task/text-to-image)** — note that X-Ray shows *two* steps: your idea is sharpened into a full prompt before it reaches the diffusion model.
+
+Daily allowances are shared across everyone using the site, so a route may occasionally report that it is out of quota — that state is part of the design, and the reason is always shown.
 
 ---
 
@@ -162,7 +177,7 @@ The guard degrades this gracefully rather than preventing it: per-visitor daily 
 | Fonts | **Inter** + **JetBrains Mono** | Mono for X-Ray: model ids and latency only read cleanly aligned |
 | Hosting | **Vercel** (Hobby) | Streaming route handlers, zero config |
 | Analytics | **GA4** + **Vercel Analytics** | Audience data, kept separate from execution traces |
-| Testing | **Vitest** | 57 tests, no network, no quota spent |
+| Testing | **Vitest** | 70 tests, no network, no quota spent |
 
 ### Design
 
@@ -204,7 +219,7 @@ All free, no card required. Every variable is documented in [`.env.example`](.en
 npm run dev              # dev server
 npm run build            # production build
 npm run typecheck        # tsc --noEmit
-npm test                 # 57 unit tests — no network, no quota spent
+npm test                 # 70 unit tests — no network, no quota spent
 
 npm run probe            # verify every model id against your keys (no inference)
 npm run probe -- --live  # one real call per model (spends quota)
@@ -214,7 +229,7 @@ npm run probe -- --live  # one real call per model (spends quota)
 
 ## Testing
 
-57 tests, all against mock adapters. The interesting ones assert behaviour that is expensive to get wrong:
+70 tests, all against mock adapters. The interesting ones assert behaviour that is expensive to get wrong:
 
 - a mid-pipeline failure retries **only** the failed step, and completed step outputs are preserved
 - an exhausted *optional* step is skipped and passes its input through rather than failing the task
