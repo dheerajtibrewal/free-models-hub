@@ -7,11 +7,13 @@ Say what you want done — not which model does it.
 
 Text · Image · Audio, routed across free inference tiers, composed when no single model can do the job, and explained end to end.
 
+### [→ Try it live](https://free-models-hub.vercel.app)
+
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Cost](https://img.shields.io/badge/infra%20cost-%E2%82%B90-22C55E)](#the-zero-cost-constraint)
-[![Tests](https://img.shields.io/badge/tests-49%20passing-22C55E)](#testing)
+[![Tests](https://img.shields.io/badge/tests-57%20passing-22C55E)](#testing)
 
 </div>
 
@@ -160,7 +162,7 @@ The guard degrades this gracefully rather than preventing it: per-visitor daily 
 | Fonts | **Inter** + **JetBrains Mono** | Mono for X-Ray: model ids and latency only read cleanly aligned |
 | Hosting | **Vercel** (Hobby) | Streaming route handlers, zero config |
 | Analytics | **GA4** + **Vercel Analytics** | Audience data, kept separate from execution traces |
-| Testing | **Vitest** | 49 tests, no network, no quota spent |
+| Testing | **Vitest** | 57 tests, no network, no quota spent |
 
 ### Design
 
@@ -171,8 +173,8 @@ Dark-first, built on a slate base with a single blue accent. One accessibility c
 ## Running locally
 
 ```bash
-git clone <your-repo-url>
-cd Free_llm
+git clone https://github.com/dheerajtibrewal/free-models-hub.git
+cd free-models-hub
 npm install
 cp .env.example .env.local   # add your keys
 npm run dev
@@ -202,7 +204,7 @@ All free, no card required. Every variable is documented in [`.env.example`](.en
 npm run dev              # dev server
 npm run build            # production build
 npm run typecheck        # tsc --noEmit
-npm test                 # 49 unit tests — no network, no quota spent
+npm test                 # 57 unit tests — no network, no quota spent
 
 npm run probe            # verify every model id against your keys (no inference)
 npm run probe -- --live  # one real call per model (spends quota)
@@ -212,7 +214,7 @@ npm run probe -- --live  # one real call per model (spends quota)
 
 ## Testing
 
-49 tests, all against mock adapters. The interesting ones assert behaviour that is expensive to get wrong:
+57 tests, all against mock adapters. The interesting ones assert behaviour that is expensive to get wrong:
 
 - a mid-pipeline failure retries **only** the failed step, and completed step outputs are preserved
 - an exhausted *optional* step is skipped and passes its input through rather than failing the task

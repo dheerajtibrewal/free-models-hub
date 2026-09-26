@@ -34,7 +34,7 @@ export function SiteHeader() {
             target="_blank"
             rel="noreferrer noopener"
             className="grid h-11 w-11 place-items-center rounded-md text-muted-fg transition-colors duration-200 hover:bg-[var(--muted)] hover:text-fg"
-            aria-label="Source on GitHub"
+            aria-label="Source code on GitHub"
           >
             <Github size={17} aria-hidden="true" />
           </a>
