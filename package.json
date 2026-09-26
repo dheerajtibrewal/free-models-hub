@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "probe": "tsx scripts/probe.ts"
+    "probe": "tsx scripts/probe.ts",
+    "security-check": "bash scripts/security-check.sh"
   },
   "dependencies": {
     "@next/third-parties": "^15.5.4",
@@ -34,5 +35,10 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
-  }
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "description": "Task-first multimodal AI router across free inference providers",
+  "license": "MIT"
 }

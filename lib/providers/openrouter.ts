@@ -1,7 +1,7 @@
 import type { Capability } from '../registry';
 import type { NormalizedError, ProviderAdapter, StepInput, StepOutput } from '../router/types';
 import { RouterError } from '../router/types';
-import { dataUrl, httpJson, transportToError } from './http';
+import { dataUrl, httpJson, redact, transportToError } from './http';
 
 /**
  * Last-resort text/vision fallback.
@@ -77,7 +77,11 @@ export const openrouterAdapter: ProviderAdapter = {
     );
 
     if (res.error?.message) {
-      throw new RouterError({ kind: 'unavailable', retryable: true, message: res.error.message });
+      throw new RouterError({
+        kind: 'unavailable',
+        retryable: true,
+        message: redact(res.error.message),
+      });
     }
 
     const text = res.choices?.[0]?.message?.content?.trim() ?? '';

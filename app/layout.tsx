@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import { Analytics } from '@vercel/analytics/next';
+import { SiteFooter } from '@/components/site-footer';
 import './globals.css';
 
 const inter = Inter({
@@ -65,7 +66,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Skip to content
         </a>
-        {children}
+        <div className="flex min-h-dvh flex-col">
+          {children}
+          <SiteFooter />
+        </div>
         <Analytics />
         {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
       </body>

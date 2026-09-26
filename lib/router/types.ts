@@ -121,6 +121,15 @@ export interface AttemptTrace {
   error?: NormalizedError;
 }
 
+/** Human-readable shape of a payload, e.g. '51 KB image' or '4s audio'. */
+export interface PayloadSummary {
+  modality: Modality;
+  label: string;
+  bytes?: number;
+  chars?: number;
+  durationSec?: number;
+}
+
 export interface StepTrace {
   index: number;
   title: string;
@@ -132,6 +141,37 @@ export interface StepTrace {
   resolvedCapabilityId?: string;
   skipped?: boolean;
   latencyMs: number;
+  /** What actually went in and came out of this step. */
+  input?: PayloadSummary;
+  output?: PayloadSummary;
+}
+
+/** Everything this run consumed, summed across steps. */
+export interface UsageTotals {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  audioSeconds: number;
+  neurons: number;
+  /** Billable upstream calls -- failed attempts count too. */
+  providerCalls: number;
+}
+
+/**
+ * What this run drew from each free-tier budget.
+ *
+ * The whole point of the product is that free quota is finite and shared, so
+ * X-Ray shows the cost of what you just did, not only its speed.
+ */
+export interface BucketConsumption {
+  bucket: string;
+  provider: string;
+  requests: number;
+  tokens?: number;
+  audioSeconds?: number;
+  neurons?: number;
+  /** Daily ceiling for the dimension that matters most on this bucket. */
+  limitLabel?: string;
 }
 
 export interface XRayTrace {
@@ -142,6 +182,11 @@ export interface XRayTrace {
   fallbackOccurred: boolean;
   retryCount: number;
   steps: StepTrace[];
+  totals: UsageTotals;
+  consumption: BucketConsumption[];
+  /** Wall-clock time not spent waiting on a provider (routing, encoding). */
+  overheadMs: number;
+  startedAt: string;
   /** Populated when the whole task failed. */
   error?: NormalizedError;
 }

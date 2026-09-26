@@ -35,11 +35,34 @@ async function httpError(res: Response): Promise<RouterError> {
   return new RouterError(statusToError(res.status, detail));
 }
 
+/**
+ * Strip account-identifying detail out of provider error text.
+ *
+ * Provider errors are surfaced verbatim in X-Ray, which is a deliberate
+ * product feature -- but Groq embeds the ORGANISATION ID in its rate-limit
+ * messages ("in organization `org_01m3...`"), and Cloudflare puts the account
+ * id in URLs. None of that belongs in a public browser payload, and it is
+ * useless to the person reading the trace.
+ */
+export function redact(text: string): string {
+  return text
+    .replace(/\borg_[A-Za-z0-9]{6,}/g, 'org_[redacted]')
+    .replace(/\bacct_[A-Za-z0-9]{6,}/g, 'acct_[redacted]')
+    .replace(/\b(gsk|sk-or-v1|sk|cfat|xai)[-_][A-Za-z0-9_-]{12,}/gi, '[redacted-key]')
+    .replace(/\b[0-9a-f]{32}\b/g, '[redacted-id]')
+    .replace(/accounts\/[A-Za-z0-9]+/g, 'accounts/[redacted]')
+    .replace(/https?:\/\/[^\s"']*(?:token|key|secret)=[^\s"'&]*/gi, '[redacted-url]');
+}
+
 /** 400-with-a-provider-side-cause signatures, which must not block fallback. */
 const PROVIDER_SIDE_400 =
   /model_terms_required|terms acceptance|model_not_found|does not exist|decommissioned|no longer supported|is not available|unsupported_model/i;
 
-export function statusToError(status: number, detail: string): NormalizedError {
+export function statusToError(status: number, rawDetail: string): NormalizedError {
+  // Redaction happens HERE rather than at each call site: every adapter funnels
+  // through this function, so a new provider cannot accidentally leak account
+  // identifiers by forgetting to sanitise.
+  const detail = redact(rawDetail);
   const message = detail || `HTTP ${status}`;
   if (status === 429) {
     return { kind: 'rate_limit', retryable: true, message, status };
@@ -78,9 +101,9 @@ export function transportToError(error: unknown): NormalizedError {
     if (error.name === 'AbortError' || error.name === 'TimeoutError') {
       return { kind: 'timeout', retryable: true, message: 'step timed out' };
     }
-    return { kind: 'unknown', retryable: true, message: error.message };
+    return { kind: 'unknown', retryable: true, message: redact(error.message) };
   }
-  return { kind: 'unknown', retryable: true, message: String(error) };
+  return { kind: 'unknown', retryable: true, message: redact(String(error)) };
 }
 
 /**

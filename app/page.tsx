@@ -96,15 +96,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <footer className="border-t border-[var(--border)]">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-xs text-[var(--subtle-fg)] sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <p>
-              Free LLM routes to Groq, Cloudflare Workers AI and OpenRouter free tiers. Daily
-              allowances are shared by everyone and reset at 00:00 UTC.
-            </p>
-            <p>No accounts. Nothing stored.</p>
-          </div>
-        </footer>
       </main>
     </>
   );

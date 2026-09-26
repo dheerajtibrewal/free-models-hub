@@ -1,7 +1,7 @@
 import type { Capability } from '../registry';
 import type { NormalizedError, ProviderAdapter, StepInput, StepOutput } from '../router/types';
 import { RouterError } from '../router/types';
-import { base64ToBytes, bytesToBase64, httpJson, statusToError, transportToError } from './http';
+import { base64ToBytes, bytesToBase64, redact, statusToError, transportToError } from './http';
 
 /**
  * Workers AI returns three different response shapes depending on the model
@@ -75,7 +75,9 @@ export const cloudflareAdapter: ProviderAdapter = {
 
     const json = (await res.json()) as CfEnvelope<Record<string, unknown>>;
     if (json.success === false) {
-      const msg = json.errors?.map((e) => e.message).join('; ') || 'cloudflare reported failure';
+      const msg = redact(
+        json.errors?.map((e) => e.message).join('; ') || 'cloudflare reported failure',
+      );
       throw new RouterError({ kind: 'unavailable', retryable: true, message: msg });
     }
 

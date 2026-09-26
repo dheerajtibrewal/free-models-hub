@@ -3,15 +3,19 @@ import { adapterFor } from '../providers';
 import { commit, penalize, type UsageRecord } from '../quota/guard';
 import type {
   AttemptTrace,
+  BucketConsumption,
   NormalizedError,
   Payload,
+  PayloadSummary,
   Plan,
   PlannedStep,
   RunEvent,
   StepInput,
   StepTrace,
+  UsageTotals,
   XRayTrace,
 } from './types';
+import { isOnDeviceAudio } from './types';
 import { RouterError } from './types';
 
 export interface ExecuteArgs {
@@ -57,6 +61,7 @@ export async function execute(args: ExecuteArgs): Promise<ExecuteResult> {
 
   for (const step of plan.steps) {
     const stepStart = Date.now();
+    const stepInputSummary = summarizePayload(current);
     const attempts: AttemptTrace[] = [];
     let produced: Payload | undefined;
     let resolvedCapabilityId: string | undefined;
@@ -158,6 +163,8 @@ export async function execute(args: ExecuteArgs): Promise<ExecuteResult> {
           attempts,
           skipped: true,
           latencyMs,
+          input: stepInputSummary,
+          output: stepInputSummary,
         });
         emit({
           type: 'step_skipped',
@@ -178,9 +185,19 @@ export async function execute(args: ExecuteArgs): Promise<ExecuteResult> {
         to: step.to,
         attempts,
         latencyMs,
+        input: stepInputSummary,
       });
 
-      const trace = buildTrace(plan, steps, providersUsed, retryCount, fallbackOccurred, startedAt, failure);
+      const trace = buildTrace(
+        plan,
+        steps,
+        providersUsed,
+        retryCount,
+        fallbackOccurred,
+        startedAt,
+        usageRecords,
+        failure,
+      );
       await commit(visitorId, usageRecords, false);
       emit({ type: 'trace', trace });
       return { trace };
@@ -194,6 +211,8 @@ export async function execute(args: ExecuteArgs): Promise<ExecuteResult> {
       attempts,
       resolvedCapabilityId,
       latencyMs,
+      input: stepInputSummary,
+      output: summarizePayload(produced),
     });
 
     current = produced;
@@ -202,7 +221,15 @@ export async function execute(args: ExecuteArgs): Promise<ExecuteResult> {
     carriedInstruction = undefined;
   }
 
-  const trace = buildTrace(plan, steps, providersUsed, retryCount, fallbackOccurred, startedAt);
+  const trace = buildTrace(
+    plan,
+    steps,
+    providersUsed,
+    retryCount,
+    fallbackOccurred,
+    startedAt,
+    usageRecords,
+  );
 
   // Only a run that actually produced output charges the visitor's allowance.
   await commit(visitorId, usageRecords, true);
@@ -251,16 +278,104 @@ function buildTrace(
   retryCount: number,
   fallbackOccurred: boolean,
   startedAt: number,
+  usageRecords: UsageRecord[],
   error?: NormalizedError,
 ): XRayTrace {
+  const totalLatencyMs = Date.now() - startedAt;
+  // Every attempt counts as a provider call -- a failed one still cost a
+  // request against somebody's quota.
+  const allAttempts = steps.flatMap((s) => s.attempts);
+  const providerCalls = allAttempts.filter((a) => a.provider !== 'browser').length;
+  const upstreamMs = allAttempts.reduce((sum, a) => sum + a.latencyMs, 0);
+
+  const totals: UsageTotals = {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    audioSeconds: 0,
+    neurons: 0,
+    providerCalls,
+  };
+  for (const a of allAttempts) {
+    totals.inputTokens += a.usage?.inputTokens ?? 0;
+    totals.outputTokens += a.usage?.outputTokens ?? 0;
+    totals.audioSeconds += a.usage?.audioSeconds ?? 0;
+    totals.neurons += a.usage?.neurons ?? 0;
+  }
+  totals.totalTokens = totals.inputTokens + totals.outputTokens;
+
   return {
     pair: plan.recipe.pair,
     task: plan.recipe.title,
-    totalLatencyMs: Date.now() - startedAt,
+    totalLatencyMs,
     providersUsed: [...providersUsed],
     fallbackOccurred,
     retryCount,
     steps,
+    totals,
+    consumption: summarizeConsumption(usageRecords),
+    overheadMs: Math.max(0, totalLatencyMs - upstreamMs),
+    startedAt: new Date(startedAt).toISOString(),
     error,
   };
+}
+
+/** Roll per-call usage up into the free-tier budgets it actually drew from. */
+function summarizeConsumption(records: UsageRecord[]): BucketConsumption[] {
+  const byBucket = new Map<string, BucketConsumption>();
+
+  for (const { capability, usage } of records) {
+    if (capability.provider === 'browser') continue;
+    const { bucket, rpd, tpd, audioSecPerDay, neuronsPerCall } = capability.quota;
+
+    const entry = byBucket.get(bucket) ?? {
+      bucket,
+      provider: capability.provider,
+      requests: 0,
+      limitLabel: rpd
+        ? `${rpd.toLocaleString()} requests/day`
+        : neuronsPerCall
+          ? '10,000 neurons/day'
+          : undefined,
+    };
+
+    entry.requests += 1;
+    const tokens = (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0);
+    if (tpd !== undefined && tokens > 0) entry.tokens = (entry.tokens ?? 0) + tokens;
+    if (audioSecPerDay !== undefined && usage?.audioSeconds) {
+      entry.audioSeconds = (entry.audioSeconds ?? 0) + usage.audioSeconds;
+    }
+    if (neuronsPerCall !== undefined) {
+      entry.neurons = (entry.neurons ?? 0) + (usage?.neurons ?? neuronsPerCall);
+    }
+    byBucket.set(bucket, entry);
+  }
+
+  return [...byBucket.values()];
+}
+
+/** Describe a payload without carrying its bytes into the trace. */
+function summarizePayload(payload: Payload): PayloadSummary {
+  if (payload.modality === 'text') {
+    const chars = payload.text.length;
+    return {
+      modality: 'text',
+      chars,
+      label: `${chars.toLocaleString()} chars`,
+    };
+  }
+  if (isOnDeviceAudio(payload)) {
+    return { modality: 'audio', label: 'on-device voice', chars: payload.text.length };
+  }
+  const bytes = Math.round((payload.base64.length * 3) / 4);
+  const size = bytes > 1024 * 1024 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+  if (payload.modality === 'audio') {
+    return {
+      modality: 'audio',
+      bytes,
+      durationSec: payload.durationSec,
+      label: payload.durationSec ? `${Math.round(payload.durationSec)}s · ${size}` : size,
+    };
+  }
+  return { modality: 'image', bytes, label: size };
 }
